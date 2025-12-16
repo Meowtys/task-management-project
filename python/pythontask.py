@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
+from tkcalendar import DateEntry
 import json
 import os
 from datetime import datetime
@@ -100,9 +101,11 @@ class TaskManagerGUI:
         ttk.Button(input_frame, text="Add Task", command=self.add_task).grid(row=0, column=4, padx=5)
 
         ttk.Label(input_frame, text="Deadline:").grid(row=1, column=0, sticky="w", padx=5)
-        self.deadline_entry = ttk.Entry(input_frame, width=35)
+        self.deadline_entry = DateEntry(input_frame, width=35, background='darkblue',
+                                        foreground='white', borderwidth=2, year=datetime.now().year,
+                                        month=datetime.now().month, day=datetime.now().day)
         self.deadline_entry.grid(row=1, column=1, padx=5)
-        ttk.Label(input_frame, text="(YYYY-MM-DD)").grid(row=1, column=2, sticky="w")
+        ttk.Label(input_frame, text="(Click to select)").grid(row=1, column=2, sticky="w")
 
         # Search Frame
         search_frame = ttk.Frame(self.root, padding="10")
@@ -158,11 +161,10 @@ class TaskManagerGUI:
             return
         
         priority = self.priority_var.get()
-        deadline = self.deadline_entry.get().strip()
+        deadline = self.deadline_entry.get_date().strftime("%Y-%m-%d")
         
         self.manager.add_task(title, priority, deadline)
         self.title_entry.delete(0, tk.END)
-        self.deadline_entry.delete(0, tk.END)
         self.refresh_tasks()
         messagebox.showinfo("Success", f"Task '{title}' added successfully!")
 
