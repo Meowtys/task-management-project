@@ -59,6 +59,7 @@ class TaskManager extends JFrame {
         deadlineButton = new JButton(selectedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
         deadlineButton.addActionListener(e -> showDatePicker());
         deadlinePanel.add(deadlineButton);
+        deadlinePanel.add(new JLabel("(Click to select)"));
         inputPanel.add(deadlinePanel);
 
         JPanel inputContainer = new JPanel(new BorderLayout());
