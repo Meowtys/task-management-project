@@ -1,21 +1,27 @@
 import java.awt.*;
 import java.io.*;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.ChangeEvent;
 
 class TaskManager extends JFrame {
     private TaskManagerLogic logic;
     private JTable taskTable;
     private DefaultTableModel tableModel;
-    private JTextField titleField, deadlineField, searchField;
+    private JTextField titleField, searchField;
+    private JButton deadlineButton;
+    private LocalDate selectedDate;
     private JComboBox<String> priorityCombo;
     private int selectedTaskId = -1;
 
     public TaskManager() {
         logic = new TaskManagerLogic();
+        selectedDate = LocalDate.now();
         setTitle("Task Management System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1000, 750);
@@ -52,9 +58,9 @@ class TaskManager extends JFrame {
 
         JPanel deadlinePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
         deadlinePanel.add(new JLabel("Deadline:"));
-        deadlineField = new JTextField(25);
-        deadlinePanel.add(deadlineField);
-        deadlinePanel.add(new JLabel("(YYYY-MM-DD)"));
+        deadlineButton = new JButton(selectedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+        deadlineButton.addActionListener(e -> showDatePicker());
+        deadlinePanel.add(deadlineButton);
         inputPanel.add(deadlinePanel);
 
         JPanel inputContainer = new JPanel(new BorderLayout());
@@ -142,11 +148,10 @@ class TaskManager extends JFrame {
         }
 
         String priority = (String) priorityCombo.getSelectedItem();
-        String deadline = deadlineField.getText().trim();
+        String deadline = selectedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
 
         logic.addTask(title, priority, deadline);
         titleField.setText("");
-        deadlineField.setText("");
         refreshTasks();
         JOptionPane.showMessageDialog(this, "Task '" + title + "' added successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
     }
@@ -238,6 +243,99 @@ class TaskManager extends JFrame {
                 task.created_at
             });
         }
+    }
+
+    private void showDatePicker() {
+        JDialog dateDialog = new JDialog(this, "Select Deadline Date", true);
+        dateDialog.setSize(400, 300);
+        dateDialog.setLocationRelativeTo(this);
+        dateDialog.setLayout(new BorderLayout(10, 10));
+
+        JPanel datePanel = new JPanel(new GridLayout(7, 7, 5, 5));
+        datePanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        JLabel monthYearLabel = new JLabel();
+        updateMonthYearLabel(monthYearLabel, selectedDate);
+
+        JButton prevBtn = new JButton("< Previous");
+        JButton nextBtn = new JButton("Next >");
+
+        JPanel navPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        navPanel.add(prevBtn);
+        navPanel.add(monthYearLabel);
+        navPanel.add(nextBtn);
+
+        prevBtn.addActionListener(e -> {
+            selectedDate = selectedDate.minusMonths(1);
+            updateMonthYearLabel(monthYearLabel, selectedDate);
+            updateDatePanel(datePanel, dateDialog);
+        });
+
+        nextBtn.addActionListener(e -> {
+            selectedDate = selectedDate.plusMonths(1);
+            updateMonthYearLabel(monthYearLabel, selectedDate);
+            updateDatePanel(datePanel, dateDialog);
+        });
+
+        updateDatePanel(datePanel, dateDialog);
+
+        dateDialog.add(navPanel, BorderLayout.NORTH);
+        dateDialog.add(new JScrollPane(datePanel), BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        JButton cancelBtn = new JButton("Cancel");
+        cancelBtn.addActionListener(e -> dateDialog.dispose());
+        buttonPanel.add(cancelBtn);
+        dateDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dateDialog.setVisible(true);
+    }
+
+    private void updateMonthYearLabel(JLabel label, LocalDate date) {
+        label.setText(date.format(DateTimeFormatter.ofPattern("MMMM yyyy")));
+        label.setFont(new Font("Arial", Font.BOLD, 14));
+    }
+
+    private void updateDatePanel(JPanel datePanel, JDialog dateDialog) {
+        datePanel.removeAll();
+
+        String[] dayNames = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+        for (String day : dayNames) {
+            JLabel dayLabel = new JLabel(day);
+            dayLabel.setFont(new Font("Arial", Font.BOLD, 12));
+            dayLabel.setHorizontalAlignment(SwingConstants.CENTER);
+            datePanel.add(dayLabel);
+        }
+
+        LocalDate firstDay = selectedDate.withDayOfMonth(1);
+        int daysInMonth = selectedDate.lengthOfMonth();
+        int firstDayOfWeek = firstDay.getDayOfWeek().getValue() % 7;
+
+        for (int i = 0; i < firstDayOfWeek; i++) {
+            datePanel.add(new JLabel());
+        }
+
+        for (int day = 1; day <= daysInMonth; day++) {
+            JButton dayButton = new JButton(String.valueOf(day));
+            LocalDate currentDate = selectedDate.withDayOfMonth(day);
+            
+            if (currentDate.equals(LocalDate.now())) {
+                dayButton.setBackground(new Color(100, 150, 255));
+                dayButton.setForeground(Color.WHITE);
+            }
+            
+            final int finalDay = day;
+            dayButton.addActionListener(e -> {
+                selectedDate = selectedDate.withDayOfMonth(finalDay);
+                deadlineButton.setText(selectedDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                dateDialog.dispose();
+            });
+            
+            datePanel.add(dayButton);
+        }
+
+        datePanel.revalidate();
+        datePanel.repaint();
     }
 
     public static void main(String[] args) {
