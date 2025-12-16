@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
-from tkcalendar import DateEntry
+from tkcalendar import Calendar
 import json
 import os
 from datetime import datetime
@@ -74,6 +74,7 @@ class TaskManagerGUI:
         self.root.geometry("900x700")
         self.manager = TaskManager()
         self.selected_task_id = None
+        self.selected_deadline = datetime.now().strftime("%Y-%m-%d")
         
         self.setup_ui()
         self.refresh_tasks()
@@ -101,10 +102,9 @@ class TaskManagerGUI:
         ttk.Button(input_frame, text="Add Task", command=self.add_task).grid(row=0, column=4, padx=5)
 
         ttk.Label(input_frame, text="Deadline:").grid(row=1, column=0, sticky="w", padx=5)
-        self.deadline_entry = DateEntry(input_frame, width=35, background='darkblue',
-                                        foreground='white', borderwidth=2, year=datetime.now().year,
-                                        month=datetime.now().month, day=datetime.now().day)
-        self.deadline_entry.grid(row=1, column=1, padx=5)
+        self.deadline_button = ttk.Button(input_frame, text=datetime.now().strftime("%Y-%m-%d"), 
+                                         command=self.show_date_picker)
+        self.deadline_button.grid(row=1, column=1, padx=5, sticky="w")
         ttk.Label(input_frame, text="(Click to select)").grid(row=1, column=2, sticky="w")
 
         # Search Frame
@@ -161,7 +161,7 @@ class TaskManagerGUI:
             return
         
         priority = self.priority_var.get()
-        deadline = self.deadline_entry.get_date().strftime("%Y-%m-%d")
+        deadline = self.selected_deadline
         
         self.manager.add_task(title, priority, deadline)
         self.title_entry.delete(0, tk.END)
@@ -251,6 +251,34 @@ class TaskManagerGUI:
         
         if not results:
             messagebox.showinfo("Search", f"No tasks found matching '{keyword}'")
+
+    def show_date_picker(self):
+        date_window = tk.Toplevel(self.root)
+        date_window.title("Select Deadline")
+        date_window.geometry("400x350")
+        date_window.resizable(False, False)
+        date_window.grab_set()
+
+        current_date = datetime.strptime(self.selected_deadline, "%Y-%m-%d")
+        
+        calendar = Calendar(date_window, selectmode='day', year=current_date.year, 
+                           month=current_date.month, day=current_date.day)
+        calendar.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        button_frame = ttk.Frame(date_window)
+        button_frame.pack(fill=tk.X, padx=10, pady=5)
+
+        def select_date():
+            selected = calendar.selection_get()
+            self.selected_deadline = selected.strftime("%Y-%m-%d")
+            self.deadline_button.config(text=self.selected_deadline)
+            date_window.destroy()
+
+        def cancel():
+            date_window.destroy()
+
+        ttk.Button(button_frame, text="Select", command=select_date).pack(side=tk.LEFT, padx=5)
+        ttk.Button(button_frame, text="Cancel", command=cancel).pack(side=tk.LEFT, padx=5)
 
 
 if __name__ == "__main__":
