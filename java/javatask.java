@@ -7,6 +7,10 @@ import java.util.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
+/**
+ * TaskManager - Main GUI class for the Task Management System
+ * Handles the user interface, user interactions, and communication with the task logic layer
+ */
 class TaskManager extends JFrame {
     private TaskManagerLogic logic;
     private JTable taskTable;
@@ -19,7 +23,7 @@ class TaskManager extends JFrame {
 
     public TaskManager() {
         logic = new TaskManagerLogic();
-        selectedDate = LocalDate.now();
+        selectedDate = LocalDate.now();  // Initialize selected date to today
         setTitle("Task Management System");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1000, 750);
@@ -141,6 +145,7 @@ class TaskManager extends JFrame {
 
     private void addTask() {
         String title = titleField.getText().trim();
+        // Validate that task title is not empty
         if (title.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter a task title.", "Input Error", JOptionPane.WARNING_MESSAGE);
             return;
@@ -156,7 +161,7 @@ class TaskManager extends JFrame {
     }
 
     private void refreshTasks() {
-        tableModel.setRowCount(0);
+        tableModel.setRowCount(0);  // Clear all rows from table
         for (Task task : logic.getTasks()) {
             String status = task.completed ? "✓ Complete" : "○ Pending";
             tableModel.addRow(new Object[]{
@@ -207,6 +212,7 @@ class TaskManager extends JFrame {
             return;
         }
 
+        // Ask user for confirmation before deleting
         int response = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this task?", "Confirm", JOptionPane.YES_NO_OPTION);
         if (response == JOptionPane.YES_OPTION) {
             logic.deleteTask(selectedTaskId);
@@ -217,6 +223,7 @@ class TaskManager extends JFrame {
 
     private void searchTasks() {
         String keyword = searchField.getText().trim();
+        // Validate that search keyword is not empty
         if (keyword.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Please enter a search keyword.", "Input Error", JOptionPane.WARNING_MESSAGE);
             return;
@@ -264,12 +271,14 @@ class TaskManager extends JFrame {
         navPanel.add(monthYearLabel);
         navPanel.add(nextBtn);
 
+        // Navigate to previous month
         prevBtn.addActionListener(e -> {
             selectedDate = selectedDate.minusMonths(1);
             updateMonthYearLabel(monthYearLabel, selectedDate);
             updateDatePanel(datePanel, dateDialog);
         });
 
+        // Navigate to next month
         nextBtn.addActionListener(e -> {
             selectedDate = selectedDate.plusMonths(1);
             updateMonthYearLabel(monthYearLabel, selectedDate);
@@ -296,8 +305,9 @@ class TaskManager extends JFrame {
     }
 
     private void updateDatePanel(JPanel datePanel, JDialog dateDialog) {
-        datePanel.removeAll();
+        datePanel.removeAll();  // Clear previous calendar
 
+        // Add day-of-week headers
         String[] dayNames = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
         for (String day : dayNames) {
             JLabel dayLabel = new JLabel(day);
@@ -306,23 +316,28 @@ class TaskManager extends JFrame {
             datePanel.add(dayLabel);
         }
 
+        // Calculate starting position and days in month
         LocalDate firstDay = selectedDate.withDayOfMonth(1);
         int daysInMonth = selectedDate.lengthOfMonth();
         int firstDayOfWeek = firstDay.getDayOfWeek().getValue() % 7;
 
+        // Add empty cells for days before the first of the month
         for (int i = 0; i < firstDayOfWeek; i++) {
             datePanel.add(new JLabel());
         }
 
+        // Add buttons for each day of the month
         for (int day = 1; day <= daysInMonth; day++) {
             JButton dayButton = new JButton(String.valueOf(day));
             LocalDate currentDate = selectedDate.withDayOfMonth(day);
             
+            // Highlight today's date with blue background
             if (currentDate.equals(LocalDate.now())) {
                 dayButton.setBackground(new Color(100, 150, 255));
                 dayButton.setForeground(Color.WHITE);
             }
             
+            // Handle date selection
             final int finalDay = day;
             dayButton.addActionListener(e -> {
                 selectedDate = selectedDate.withDayOfMonth(finalDay);
@@ -342,6 +357,10 @@ class TaskManager extends JFrame {
     }
 }
 
+/**
+ * Task - Represents a single task with its properties
+ * Stores task information including id, title, priority, deadline, completion status, and creation timestamp
+ */
 class Task {
     int id;
     String title;
@@ -355,19 +374,23 @@ class Task {
         this.title = title;
         this.priority = priority;
         this.deadline = deadline;
-        this.completed = false;
+        this.completed = false;  // New tasks start as incomplete
         this.created_at = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
     }
 }
 
+/**
+ * TaskManagerLogic - Handles business logic and data persistence for the task manager
+ * Manages task CRUD operations, file I/O, and JSON parsing
+ */
 class TaskManagerLogic {
     private final java.util.List<Task> tasks;
     private int taskIdCounter;
     private final String filename = "tasks.json";
 
     public TaskManagerLogic() {
-        tasks = loadTasks();
-        taskIdCounter = tasks.size() + 1;
+        tasks = loadTasks();  // Load tasks from JSON file
+        taskIdCounter = tasks.size() + 1;  // Set next ID to one more than existing tasks
     }
 
     private java.util.List<Task> loadTasks() {
@@ -375,6 +398,7 @@ class TaskManagerLogic {
             java.util.List<Task> loadedTasks = new ArrayList<>();
             String line;
             while ((line = reader.readLine()) != null) {
+                // Parse each task from JSON file
                 if (line.contains("\"id\"")) {
                     Task task = parseTask(line);
                     if (task != null) loadedTasks.add(task);
@@ -382,13 +406,14 @@ class TaskManagerLogic {
             }
             return loadedTasks;
         } catch (IOException e) {
+            // Return empty list if file doesn't exist
             return new ArrayList<>();
         }
     }
 
     private Task parseTask(String json) {
-        // Simple JSON parsing for demonstration
         try {
+            // Extract fields from JSON string
             int id = Integer.parseInt(extractField(json, "id"));
             String title = extractField(json, "title");
             String priority = extractField(json, "priority");
@@ -400,7 +425,7 @@ class TaskManagerLogic {
             task.created_at = extractField(json, "created_at");
             return task;
         } catch (NumberFormatException | NullPointerException e) {
-            return null;
+            return null;  // Return null if parsing fails
         }
     }
 
@@ -415,7 +440,7 @@ class TaskManagerLogic {
         Task task = new Task(taskIdCounter, title, priority, deadline);
         tasks.add(task);
         taskIdCounter++;
-        saveTasks();
+        saveTasks();  // Persist changes to file
     }
 
     public java.util.List<Task> getTasks() {
@@ -429,27 +454,29 @@ class TaskManagerLogic {
     public void editTask(int id, String newTitle, String newPriority, String newDeadline) {
         Task task = getTask(id);
         if (task != null) {
+            // Update only non-empty fields
             if (!newTitle.isEmpty()) task.title = newTitle;
             if (!newPriority.isEmpty()) task.priority = newPriority;
             if (!newDeadline.isEmpty()) task.deadline = newDeadline;
-            saveTasks();
+            saveTasks();  // Persist changes to file
         }
     }
 
     public void deleteTask(int id) {
-        tasks.removeIf(t -> t.id == id);
-        saveTasks();
+        tasks.removeIf(t -> t.id == id);  // Remove task with matching ID
+        saveTasks();  // Persist changes to file
     }
 
     public void markComplete(int id) {
         Task task = getTask(id);
         if (task != null) {
-            task.completed = !task.completed;
-            saveTasks();
+            task.completed = !task.completed;  // Toggle completion status
+            saveTasks();  // Persist changes to file
         }
     }
 
     public java.util.List<Task> searchTasks(String keyword) {
+        // Filter tasks where title contains the keyword (case-insensitive)
         return tasks.stream()
                 .filter(t -> t.title.toLowerCase().contains(keyword.toLowerCase()))
                 .toList();
@@ -458,6 +485,7 @@ class TaskManagerLogic {
     private void saveTasks() {
         try (PrintWriter writer = new PrintWriter(new FileWriter(filename))) {
             writer.println("[");
+            // Write each task as JSON object
             for (int i = 0; i < tasks.size(); i++) {
                 Task t = tasks.get(i);
                 writer.println("{");
@@ -476,6 +504,7 @@ class TaskManagerLogic {
     }
 
     private String escapeJson(String s) {
+        // Escape special characters for JSON format
         return s.replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "\\r");
     }
 }
