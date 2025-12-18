@@ -5,79 +5,104 @@ import json
 import os
 from datetime import datetime
 
+
+"""
+Task Management System - Python GUI Application
+Manages tasks with CRUD operations, priority levels, and deadline tracking
+"""
+
+
 class TaskManager:
+    """TaskManager - Handles data persistence and business logic for tasks
+    Manages loading, saving, and manipulating tasks from JSON file
+    """
     def __init__(self, filename="tasks.json"):
+        """Initialize TaskManager and load existing tasks from file"""
         self.filename = filename
-        self.tasks = self.load_tasks()
-        self.task_id_counter = len(self.tasks) + 1
+        self.tasks = self.load_tasks()  # Load tasks from JSON file
+        self.task_id_counter = len(self.tasks) + 1  # Set next ID based on existing tasks
 
     def load_tasks(self):
+        """Load tasks from JSON file, return empty list if file doesn't exist"""
         if os.path.exists(self.filename):
             with open(self.filename, 'r') as f:
                 return json.load(f)
         return []
 
     def save_tasks(self):
+        """Save all tasks to JSON file with proper formatting"""
         with open(self.filename, 'w') as f:
             json.dump(self.tasks, f, indent=2)
 
     def add_task(self, title, priority="Low", deadline=""):
+        """Create and add a new task with specified parameters"""
         task = {
             "id": self.task_id_counter,
             "title": title,
             "priority": priority,
             "deadline": deadline,
-            "completed": False,
+            "completed": False,  # New tasks start as incomplete
             "created_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
         self.tasks.append(task)
         self.task_id_counter += 1
-        self.save_tasks()
+        self.save_tasks()  # Persist changes to file
         return task
 
     def view_tasks(self):
+        """Return all tasks from the list"""
         return self.tasks
 
     def edit_task(self, task_id, new_title=None, new_priority=None, new_deadline=None):
+        """Edit a task's properties - only updates non-None values"""
         for task in self.tasks:
             if task["id"] == task_id:
+                # Update only provided fields
                 if new_title:
                     task["title"] = new_title
                 if new_priority:
                     task["priority"] = new_priority
                 if new_deadline:
                     task["deadline"] = new_deadline
-                self.save_tasks()
+                self.save_tasks()  # Persist changes to file
                 return True
         return False
 
     def delete_task(self, task_id):
-        self.tasks = [t for t in self.tasks if t["id"] != task_id]
-        self.save_tasks()
+        """Delete a task by removing it from the list"""
+        self.tasks = [t for t in self.tasks if t["id"] != task_id]  # Filter out task
+        self.save_tasks()  # Persist changes to file
 
     def mark_complete(self, task_id):
+        """Toggle the completion status of a task"""
         for task in self.tasks:
             if task["id"] == task_id:
-                task["completed"] = not task["completed"]
-                self.save_tasks()
+                task["completed"] = not task["completed"]  # Toggle completion
+                self.save_tasks()  # Persist changes to file
                 return True
         return False
 
     def search_tasks(self, keyword):
+        """Search for tasks containing keyword in title (case-insensitive)"""
         return [t for t in self.tasks if keyword.lower() in t["title"].lower()]
 
 
 class TaskManagerGUI:
+    """TaskManagerGUI - Main GUI class for the Task Management System
+    Handles user interface, user interactions, and communication with TaskManager
+    """
+    
     def __init__(self, root):
+        """Initialize the GUI and set up all UI components"""
         self.root = root
         self.root.title("Task Management System")
         self.root.geometry("900x700")
-        self.manager = TaskManager()
-        self.selected_task_id = None
-        self.selected_deadline = datetime.now().strftime("%Y-%m-%d")
+        self.manager = TaskManager()  # Create task manager instance
+        self.selected_task_id = None  # Track selected task
+        self.selected_deadline = datetime.now().strftime("%Y-%m-%d")  # Initialize deadline to today
         
-        self.setup_ui()
-        self.refresh_tasks()
+        self.setup_ui()  # Build UI components
+        self.refresh_tasks()  # Display existing tasks
 
     def setup_ui(self):
         # Header
@@ -155,7 +180,9 @@ class TaskManagerGUI:
         ttk.Button(button_frame, text="Delete", command=self.delete_task).pack(side=tk.LEFT, padx=5)
 
     def add_task(self):
+        """Validate input and create a new task"""
         title = self.title_entry.get().strip()
+        # Validate that task title is not empty
         if not title:
             messagebox.showwarning("Input Error", "Please enter a task title.")
             return
@@ -169,9 +196,11 @@ class TaskManagerGUI:
         messagebox.showinfo("Success", f"Task '{title}' added successfully!")
 
     def refresh_tasks(self):
+        """Clear task table and repopulate with current tasks from manager"""
         for item in self.tree.get_children():
             self.tree.delete(item)
         
+        # Display all tasks with their status
         for task in self.manager.view_tasks():
             status = "✓ Complete" if task["completed"] else "○ Pending"
             self.tree.insert("", "end", values=(
@@ -189,6 +218,7 @@ class TaskManagerGUI:
             self.selected_task_id = int(self.tree.item(selected[0])["values"][0])
 
     def mark_complete(self):
+        """Toggle completion status of selected task"""
         if self.selected_task_id is None:
             messagebox.showwarning("Selection Error", "Please select a task.")
             return
@@ -198,6 +228,7 @@ class TaskManagerGUI:
         messagebox.showinfo("Success", "Task status updated!")
 
     def edit_task(self):
+        """Edit selected task's title, priority, and deadline"""
         if self.selected_task_id is None:
             messagebox.showwarning("Selection Error", "Please select a task.")
             return
@@ -207,6 +238,7 @@ class TaskManagerGUI:
         if not task:
             return
         
+        # Get new values from user via dialogs
         new_title = simpledialog.askstring("Edit Title", "New title:", initialvalue=task["title"])
         if new_title is None:
             return
@@ -219,17 +251,21 @@ class TaskManagerGUI:
         messagebox.showinfo("Success", "Task updated!")
 
     def delete_task(self):
+        """Delete selected task after user confirmation"""
         if self.selected_task_id is None:
             messagebox.showwarning("Selection Error", "Please select a task.")
             return
         
+        # Ask user for confirmation before deleting
         if messagebox.askyesno("Confirm", "Are you sure you want to delete this task?"):
             self.manager.delete_task(self.selected_task_id)
             self.refresh_tasks()
             messagebox.showinfo("Success", "Task deleted!")
 
     def search_tasks(self):
+        """Search for tasks matching keyword in title"""
         keyword = self.search_entry.get().strip()
+        # Validate that search keyword is not empty
         if not keyword:
             messagebox.showwarning("Input Error", "Please enter a search keyword.")
             return
@@ -237,6 +273,7 @@ class TaskManagerGUI:
         for item in self.tree.get_children():
             self.tree.delete(item)
         
+        # Display search results
         results = self.manager.search_tasks(keyword)
         for task in results:
             status = "✓ Complete" if task["completed"] else "○ Pending"
@@ -253,14 +290,17 @@ class TaskManagerGUI:
             messagebox.showinfo("Search", f"No tasks found matching '{keyword}'")
 
     def show_date_picker(self):
+        """Display a calendar dialog for deadline selection"""
         date_window = tk.Toplevel(self.root)
         date_window.title("Select Deadline")
         date_window.geometry("400x350")
         date_window.resizable(False, False)
-        date_window.grab_set()
+        date_window.grab_set()  # Make dialog modal
 
+        # Parse current selected deadline
         current_date = datetime.strptime(self.selected_deadline, "%Y-%m-%d")
         
+        # Create calendar widget
         calendar = Calendar(date_window, selectmode='day', year=current_date.year, 
                            month=current_date.month, day=current_date.day)
         calendar.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -269,12 +309,14 @@ class TaskManagerGUI:
         button_frame.pack(fill=tk.X, padx=10, pady=5)
 
         def select_date():
+            """Handle date selection from calendar"""
             selected = calendar.selection_get()
             self.selected_deadline = selected.strftime("%Y-%m-%d")
             self.deadline_button.config(text=self.selected_deadline)
             date_window.destroy()
 
         def cancel():
+            """Close dialog without selecting date"""
             date_window.destroy()
 
         ttk.Button(button_frame, text="Select", command=select_date).pack(side=tk.LEFT, padx=5)
